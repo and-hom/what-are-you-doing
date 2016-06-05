@@ -6,6 +6,7 @@ import (
 	"os"
 	"io/ioutil"
 	"strings"
+	"time"
 )
 
 type JobLogger interface {
@@ -34,11 +35,12 @@ type FileJobLogger struct {
 }
 
 func (v FileJobLogger) thisWeek() int {
-	return 0
+	_, w := time.Now().ISOWeek()
+	return int(w)
 }
 
 func (v FileJobLogger) logPath(week int) string {
-	return fmt.Sprintf("%s/%d.txt", v.Basedir, week)
+	return fmt.Sprintf("%s/%d-%d.txt", v.Basedir, time.Now().Year(), week)
 }
 
 func (v FileJobLogger) summaryPath() string {
@@ -46,13 +48,14 @@ func (v FileJobLogger) summaryPath() string {
 }
 
 func (v FileJobLogger) AddForNow(project string) {
+	os.MkdirAll(v.Basedir, 0777)
 	path := v.logPath(v.thisWeek())
 	file, e := os.OpenFile(path, os.O_RDWR | os.O_APPEND | os.O_CREATE, 0660);
 	if e != nil {
 		log.Fatal(e)
 	}
 	defer file.Close()
-	_, e = file.WriteString(fmt.Sprintf("%s\n", project))
+	_, e = file.WriteString(fmt.Sprintf("%d\t%s\n", time.Now().Unix(), project))
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -65,8 +68,8 @@ func (v FileJobLogger) weekSnapshot(week int) map[string]int {
 	}
 	lines := strings.Split(string(content), "\n")
 	result := map[string]int{}
-	for _,line :=range lines {
-		result[line]+=1
+	for _, line := range lines {
+		result[line] += 1
 	}
 	return result
 }

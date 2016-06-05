@@ -12,19 +12,29 @@ import (
 	"github.com/axet/desktop/go"
 )
 
-const (
-	OTHER = "other"
-	PROJECT1 = "project 1"
-	PROJECT2 = "project 2"
-)
+func mkgrid(orientation gtk.Orientation) *gtk.Grid {
+	grid, err := gtk.GridNew()
+	if err != nil {
+		log.Fatal("Unable to create grid:", err)
+	}
+	grid.SetOrientation(orientation)
+	return grid
+}
 
-type AskBox struct {
-	activeProject string ""
+type App struct {
+	configuration Configuration
+	systray       *desktop.DesktopSysTray
 	jobLogger     JobLogger
+	activeProject string ""
 	win           *gtk.Window
 }
 
-func (v *AskBox) initWindow() {
+func (m *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
+}
+func (m *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
+}
+
+func (v *App) initWindow() {
 	log.Info("Window creation...")
 	// Create a new toplevel window, set its title, and connect it to the
 	// "destroy" signal to exit the GTK main loop when it is destroyed.
@@ -56,9 +66,10 @@ func (v *AskBox) initWindow() {
 	if err != nil {
 		log.Fatal("Unable to create combo box:", err)
 	}
-	comboBox.AppendText(OTHER)
-	comboBox.AppendText(PROJECT1)
-	comboBox.AppendText(PROJECT2)
+	comboBox.AppendText("Other")
+	for _, project := range v.configuration.Projects {
+		comboBox.AppendText(project)
+	}
 
 	comboBox.Connect("changed", v.on_change)
 
@@ -81,7 +92,7 @@ func (v *AskBox) initWindow() {
 	log.Info("Window created")
 }
 
-func (v *AskBox) show() {
+func (v *App) show() {
 	log.Info("Show window")
 	if !v.win.GetNoShowAll() {
 		glib.IdleAdd(v.win.ShowAll)
@@ -90,57 +101,25 @@ func (v *AskBox) show() {
 	}
 }
 
-func (v *AskBox) on_change(text *gtk.ComboBoxText) {
+func (v *App) on_change(text *gtk.ComboBoxText) {
 	v.activeProject = text.GetActiveText()
 	v.changeButtonState()
 }
 
-func (v *AskBox) on_button() {
+func (v *App) on_button() {
 	v.jobLogger.AddForNow(v.activeProject)
 	log.Info("Hide window")
 	v.win.Hide()
-	for key, value := range  v.jobLogger.ThisWeekSnapshot() {
+	for key, value := range v.jobLogger.ThisWeekSnapshot() {
 		fmt.Println("Key:", key, "Value:", value)
 	}
 }
 
-func (v *AskBox) changeButtonState() {
+func (v *App) changeButtonState() {
 
 }
 
-func mkgrid(orientation gtk.Orientation) *gtk.Grid {
-	grid, err := gtk.GridNew()
-	if err != nil {
-		log.Fatal("Unable to create grid:", err)
-	}
-	grid.SetOrientation(orientation)
-	return grid
-}
-
-type SysTest struct {
-	s *desktop.DesktopSysTray
-}
-
-func (m *SysTest) Click(mn *desktop.Menu) {
-	fmt.Println("m", mn.Name)
-}
-
-func (m *SysTest) ClickBox(mn *desktop.Menu) {
-	fmt.Println(mn.Name)
-	mn.State = !mn.State
-	m.s.Update()
-}
-
-
-func main() {
-
-
-	log.SetFormatter(&log.TextFormatter{FullTimestamp:true, TimestampFormat:"2006-01-02 15:04:05 -0700"})
-	log.Info("Starting...")
-
-
-	m := SysTest{desktop.DesktopSysTrayNew()}
-
+func loadIcon(app App) image.Image {
 	file, err := os.Open("icon.png")
 	if err != nil {
 		panic(err)
@@ -149,48 +128,52 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	return icon
+}
 
-	menu := []desktop.Menu{
-		desktop.Menu{Icon: icon, Type: desktop.MenuItem, Enabled: true, Name: "test1", Action: m.Click},
-		desktop.Menu{Type: desktop.MenuSeparator},
-		desktop.Menu{Icon: icon, Type: desktop.MenuItem, Enabled: true, Name: "test2", Menu: []desktop.Menu{
-			desktop.Menu{Type: desktop.MenuItem, Enabled: true, Name: "test21", Action: m.Click},
-			desktop.Menu{Type: desktop.MenuItem, Enabled: true, Name: "test22", Action: m.Click},
-		}},
-		desktop.Menu{Type: desktop.MenuItem, Enabled: false, Name: "test3", Action: m.Click},
-		desktop.Menu{Type: desktop.MenuCheckBox, Enabled: true, Name: "test4", State: true, Action: m.ClickBox},
-		desktop.Menu{Type: desktop.MenuSeparator},
-		desktop.Menu{Icon: icon, Type: desktop.MenuItem, Enabled: true, Name: "test5", Action: m.Click},
+func main() {
+
+	log.SetFormatter(&log.TextFormatter{FullTimestamp:true, TimestampFormat:"2006-01-02 15:04:05 -0700"})
+	log.Info("Starting...")
+
+	configuration := load("")
+	log.Infof("Loaded configuration %+v", configuration)
+
+	app := App{
+		systray:desktop.DesktopSysTrayNew(),
+		jobLogger:FileJobLogger{
+			Basedir:configuration.LogPath,
+		},
+		configuration: configuration,
 	}
-
-	m.s.SetIcon(icon)
-	m.s.SetTitle("go menu hoho!")
-	m.s.SetMenu(menu)
-	m.s.Show()
-
-	desktop.Main()
-
-
-
-	// Initialize GTK without parsing any command line arguments.
-	gtk.Init(nil)
-
-	askBox := AskBox{
-		jobLogger: FileJobLogger{
-			Basedir:"/tmp",
+	icon := loadIcon(app)
+	menu := []desktop.Menu{
+		desktop.Menu{
+			Type: desktop.MenuItem,
+			Enabled: true,
+			Name: "Copy this week report to clipboard",
+			Action: app.CopyThisWeekToClipboard,
+		},
+		desktop.Menu{
+			Type: desktop.MenuItem,
+			Enabled: true,
+			Name: "Copy prev week report to clipboard",
+			Action: app.CopyPrevWeekToClipboard,
 		},
 	}
 
-	askBox.initWindow()
+	app.systray.SetIcon(icon)
+	app.systray.SetTitle("What are you doing now?")
+	app.systray.SetMenu(menu)
+	app.systray.Show()
+
+	app.initWindow()
 
 	s := gocron.NewScheduler()
-	periodMin := 30
-	log.Info(fmt.Sprintf("Scheduling cron task for every %d minutes", periodMin))
-	s.Every(uint64(periodMin)).Minutes().Do(askBox.show)
+	log.Info(fmt.Sprintf("Scheduling cron task for every %d minutes", app.configuration.AskPeriodMin))
+	s.Every(uint64(app.configuration.AskPeriodMin)).Minutes().Do(app.show)
 	s.Start()
 
-	askBox.show()
-	// Begin executing the GTK main loop.  This blocks until
-	// gtk.MainQuit() is run.
-	gtk.Main()
+	app.show()
+	desktop.Main()
 }
