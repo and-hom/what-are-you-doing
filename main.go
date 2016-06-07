@@ -2,14 +2,16 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-//"github.com/jasonlvhit/gocron"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/jasonlvhit/gocron"
 	"fmt"
 	"os"
 	"image"
+	"bytes"
 	"github.com/axet/desktop/go"
+	"github.com/atotto/clipboard"
+	"time"
 )
 
 func mkgrid(orientation gtk.Orientation) *gtk.Grid {
@@ -29,12 +31,31 @@ type App struct {
 	win           *gtk.Window
 }
 
-func (m *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
-}
-func (m *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
+func (app *App) toClipboard(report map[string]int, week int) {
+	var buffer bytes.Buffer
+
+	local, _ := time.LoadLocation("Local")
+	monday := firstDayOfISOWeek(time.Now().Year(), week, local)
+	friday := monday.Add(5 * 24 * time.Hour)
+	buffer.WriteString(fmt.Sprintf("%s - %s\n", monday.Format("2006-01-02"), friday.Format("2006-01-02")))
+	for k, v := range report {
+		buffer.WriteString(fmt.Sprintf("**%s** - %d%%\n", k, v))
+	}
+
+	if err := clipboard.WriteAll(buffer.String()); err != nil {
+		panic(err)
+	}
 }
 
-func (v *App) initWindow() {
+func (app *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
+	report, week := app.jobLogger.ThisWeekSnapshot()
+	app.toClipboard(report, week)
+}
+func (app *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
+	report, week := app.jobLogger.PrviousWeekSnapshot()
+	app.toClipboard(report, week)
+}
+func (app *App) initWindow() {
 	log.Info("Window creation...")
 	// Create a new toplevel window, set its title, and connect it to the
 	// "destroy" signal to exit the GTK main loop when it is destroyed.
@@ -43,12 +64,12 @@ func (v *App) initWindow() {
 		log.Fatal("Unable to create window:", err)
 	}
 
-	v.win = win
-	v.win.SetTitle("What are you doing now?")
-	v.win.Resize(300, 50)
-	v.win.SetBorderWidth(10)
-	v.win.SetPosition(gtk.WIN_POS_CENTER)
-	v.win.Connect("destroy", func() {
+	app.win = win
+	app.win.SetTitle("What are you doing now?")
+	app.win.Resize(300, 50)
+	app.win.SetBorderWidth(10)
+	app.win.SetPosition(gtk.WIN_POS_CENTER)
+	app.win.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
 
@@ -67,11 +88,11 @@ func (v *App) initWindow() {
 		log.Fatal("Unable to create combo box:", err)
 	}
 	comboBox.AppendText("Other")
-	for _, project := range v.configuration.Projects {
+	for _, project := range app.configuration.Projects {
 		comboBox.AppendText(project)
 	}
 
-	comboBox.Connect("changed", v.on_change)
+	comboBox.Connect("changed", app.on_change)
 
 	comboBox.SetSizeRequest(270, 20)
 
@@ -80,7 +101,7 @@ func (v *App) initWindow() {
 		log.Fatal("Unable to create button:", err)
 	}
 	button.SetLabel("OK")
-	button.Connect("clicked", v.on_button)
+	button.Connect("clicked", app.on_button)
 
 	grid2.Add(comboBox)
 	grid2.Add(button)
@@ -88,34 +109,35 @@ func (v *App) initWindow() {
 	grid.Add(l)
 	grid.Add(grid2)
 
-	v.win.Add(grid)
+	app.win.Add(grid)
 	log.Info("Window created")
 }
 
-func (v *App) show() {
+func (app *App) show() {
 	log.Info("Show window")
-	if !v.win.GetNoShowAll() {
-		glib.IdleAdd(v.win.ShowAll)
+	if !app.win.GetNoShowAll() {
+		glib.IdleAdd(app.win.ShowAll)
 	} else {
-		v.jobLogger.AddForNow("===")
+		app.jobLogger.AddForNow("===")
 	}
 }
 
-func (v *App) on_change(text *gtk.ComboBoxText) {
-	v.activeProject = text.GetActiveText()
-	v.changeButtonState()
+func (app *App) on_change(text *gtk.ComboBoxText) {
+	app.activeProject = text.GetActiveText()
+	app.changeButtonState()
 }
 
-func (v *App) on_button() {
-	v.jobLogger.AddForNow(v.activeProject)
+func (app *App) on_button() {
+	app.jobLogger.AddForNow(app.activeProject)
 	log.Info("Hide window")
-	v.win.Hide()
-	for key, value := range v.jobLogger.ThisWeekSnapshot() {
+	app.win.Hide()
+	report, _ := app.jobLogger.ThisWeekSnapshot()
+	for key, value := range report {
 		fmt.Println("Key:", key, "Value:", value)
 	}
 }
 
-func (v *App) changeButtonState() {
+func (app *App) changeButtonState() {
 
 }
 
