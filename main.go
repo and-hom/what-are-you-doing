@@ -66,7 +66,7 @@ func (app *App) initWindow() {
 
 	app.win = win
 	app.win.SetTitle("What are you doing now?")
-	app.win.Resize(300, 50)
+	app.win.Resize(300, 50 + len(app.configuration.Projects) * 20)
 	app.win.SetBorderWidth(10)
 	app.win.SetPosition(gtk.WIN_POS_CENTER)
 	app.win.Connect("destroy", func() {
@@ -83,19 +83,6 @@ func (app *App) initWindow() {
 
 	grid2 := mkgrid(gtk.ORIENTATION_HORIZONTAL)
 
-	comboBox, err := gtk.ComboBoxTextNew()
-	if err != nil {
-		log.Fatal("Unable to create combo box:", err)
-	}
-	comboBox.AppendText("Other")
-	for _, project := range app.configuration.Projects {
-		comboBox.AppendText(project)
-	}
-
-	comboBox.Connect("changed", app.on_change)
-
-	comboBox.SetSizeRequest(270, 20)
-
 	button, err := gtk.ButtonNew()
 	if err != nil {
 		log.Fatal("Unable to create button:", err)
@@ -103,11 +90,28 @@ func (app *App) initWindow() {
 	button.SetLabel("OK")
 	button.Connect("clicked", app.on_button)
 
-	grid2.Add(comboBox)
 	grid2.Add(button)
 
 	grid.Add(l)
 	grid.Add(grid2)
+
+	var group *glib.SList = nil
+	for i, project := range app.configuration.Projects {
+		if (i == 0) {
+			rb, _ := gtk.RadioButtonNewWithLabel(glib.WrapSList(0), project)
+			gr, _ := rb.GetGroup()
+			group = gr
+			rb.Connect("clicked", app.on_change)
+			grid.Add(rb)
+		} else {
+			rb, _ := gtk.RadioButtonNewWithLabel(group, project)
+			gr, _ := rb.GetGroup()
+			group = gr
+
+			rb.Connect("clicked", app.on_change)
+			grid.Add(rb)
+		}
+	}
 
 	app.win.Add(grid)
 	log.Info("Window created")
@@ -122,8 +126,8 @@ func (app *App) show() {
 	}
 }
 
-func (app *App) on_change(text *gtk.ComboBoxText) {
-	app.activeProject = text.GetActiveText()
+func (app *App) on_change(text *gtk.RadioButton) {
+	app.activeProject, _ = text.GetLabel()
 	app.changeButtonState()
 }
 
