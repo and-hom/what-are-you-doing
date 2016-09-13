@@ -6,7 +6,6 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/jasonlvhit/gocron"
 	"fmt"
-	"os"
 	"image"
 	"bytes"
 	"github.com/axet/desktop/go"
@@ -146,11 +145,11 @@ func (app *App) changeButtonState() {
 }
 
 func loadIcon(app App) image.Image {
-	file, err := os.Open("icon.png")
+	imgData, err := Asset("icon.png")
 	if err != nil {
 		panic(err)
 	}
-	icon, _, err := image.Decode(file)
+	icon, _, err := image.Decode(bytes.NewReader(imgData))
 	if err != nil {
 		panic(err)
 	}
