@@ -22,6 +22,12 @@ func mkgrid(orientation gtk.Orientation) *gtk.Grid {
 	return grid
 }
 
+func assertBtnCreated(err error) {
+	if err != nil {
+		log.Fatal("Unable to create button:", err)
+	}
+}
+
 type App struct {
 	configuration Configuration
 	systray       *desktop.DesktopSysTray
@@ -65,7 +71,7 @@ func (app *App) initWindow() {
 
 	app.win = win
 	app.win.SetTitle("What are you doing now?")
-	app.win.Resize(300, 50 + len(app.configuration.Projects) * 20)
+	app.win.Resize(200, 50 + len(app.configuration.Projects) * 20)
 	app.win.SetBorderWidth(10)
 	app.win.SetPosition(gtk.WIN_POS_CENTER)
 	app.win.Connect("destroy", func() {
@@ -74,24 +80,34 @@ func (app *App) initWindow() {
 
 	grid := mkgrid(gtk.ORIENTATION_VERTICAL)
 
+
 	l, err := gtk.LabelNew("What are you doing now?")
 	if err != nil {
 		log.Fatal("Unable to create label:", err)
 	}
 	l.SetMarginBottom(5)
+	l.SetMarginEnd(50)
+
+	skipBtn, err := gtk.ButtonNew()
+	assertBtnCreated(err)
+	skipBtn.SetLabel("Skip")
+	skipBtn.Connect("clicked", app.on_skip)
+
+
+	header := mkgrid(gtk.ORIENTATION_HORIZONTAL)
+	header.Add(l)
+	header.Add(skipBtn)
 
 	grid2 := mkgrid(gtk.ORIENTATION_HORIZONTAL)
 
 	button, err := gtk.ButtonNew()
-	if err != nil {
-		log.Fatal("Unable to create button:", err)
-	}
+	assertBtnCreated(err)
 	button.SetLabel("OK")
 	button.Connect("clicked", app.on_button)
 
 	grid2.Add(button)
 
-	grid.Add(l)
+	grid.Add(header)
 	grid.Add(grid2)
 
 	var group *glib.SList = nil
@@ -132,12 +148,18 @@ func (app *App) on_change(text *gtk.RadioButton) {
 
 func (app *App) on_button() {
 	app.jobLogger.AddForNow(app.activeProject)
-	log.Info("Hide window")
+	log.Infof("Hide window - selected %s", app.activeProject)
 	app.win.Hide()
 	report, _ := app.jobLogger.ThisWeekSnapshot()
 	for key, value := range report {
 		fmt.Println("Key:", key, "Value:", value)
 	}
+}
+
+func (app *App) on_skip() {
+	app.jobLogger.AddForNow(app.activeProject)
+	log.Info("Hide window - skip")
+	app.win.Hide()
 }
 
 func (app *App) changeButtonState() {
