@@ -209,7 +209,7 @@ func main() {
 
 	app.systray.SetIcon(icon)
 	app.systray.SetTitle("What are you doing now?")
-	app.systray.SetMenu(app.trayMenu(OfWeek))
+	app.systray.SetMenu(app.trayMenu(configuration.PercentageMode))
 	app.systray.Show()
 
 	app.initWindow()

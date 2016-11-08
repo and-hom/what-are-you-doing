@@ -6,3 +6,5 @@ projects:
 ask-period-min: 30
 
 log-path: {{.HOME}}/.what-are-you-doing/
+
+percentage-mode: of-week

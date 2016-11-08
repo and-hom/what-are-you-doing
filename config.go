@@ -16,13 +16,13 @@ type Configuration struct {
 	AskPeriodMin int `yaml:"ask-period-min"`
 	LogPath      string `yaml:"log-path"`
 	Projects     []string `yaml:"projects"`
-	PercentageMode PercentageMode
+	PercentageMode PercentageMode `yaml:"percentage-mode"`
 }
 
-type PercentageMode int;
+type PercentageMode string;
 
-const OfWeek PercentageMode = 0
-const OfTotal PercentageMode = 1
+const OfWeek PercentageMode = "of-week"
+const OfTotal PercentageMode = "of-total"
 
 func loadConf(filename string) (Configuration, error) {
 	log.Infof("Loading configuration from %s", filename)
