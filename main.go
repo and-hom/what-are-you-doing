@@ -29,11 +29,11 @@ func assertBtnCreated(err error) {
 }
 
 type App struct {
-	configuration Configuration
-	systray       *desktop.DesktopSysTray
-	jobLogger     JobLogger
-	activeProject string ""
-	win           *gtk.Window
+	configuration   Configuration
+	systray         *desktop.DesktopSysTray
+	jobLogger       JobLogger
+	activeProject   string ""
+	win             *gtk.Window
 }
 
 func (app *App) toClipboard(report map[string]int, week int) {
@@ -53,11 +53,11 @@ func (app *App) toClipboard(report map[string]int, week int) {
 }
 
 func (app *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
-	report, week := app.jobLogger.ThisWeekSnapshot()
+	report, week := app.jobLogger.ThisWeekSnapshot(app.configuration.PercentageMode)
 	app.toClipboard(report, week)
 }
 func (app *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
-	report, week := app.jobLogger.PrviousWeekSnapshot()
+	report, week := app.jobLogger.PrviousWeekSnapshot(app.configuration.PercentageMode)
 	app.toClipboard(report, week)
 }
 func (app *App) initWindow() {
@@ -80,7 +80,6 @@ func (app *App) initWindow() {
 
 	grid := mkgrid(gtk.ORIENTATION_VERTICAL)
 
-
 	l, err := gtk.LabelNew("What are you doing now?")
 	if err != nil {
 		log.Fatal("Unable to create label:", err)
@@ -93,19 +92,18 @@ func (app *App) initWindow() {
 	skipBtn.SetLabel("Skip")
 	skipBtn.Connect("clicked", app.on_skip)
 
-
 	header := mkgrid(gtk.ORIENTATION_HORIZONTAL)
 	header.Add(l)
 	header.Add(skipBtn)
 
 	grid2 := mkgrid(gtk.ORIENTATION_HORIZONTAL)
 
-	button, err := gtk.ButtonNew()
+	okBtn, err := gtk.ButtonNew()
 	assertBtnCreated(err)
-	button.SetLabel("OK")
-	button.Connect("clicked", app.on_button)
+	okBtn.SetLabel("OK")
+	okBtn.Connect("clicked", app.on_button)
 
-	grid2.Add(button)
+	grid2.Add(okBtn)
 
 	grid.Add(header)
 	grid.Add(grid2)
@@ -150,7 +148,7 @@ func (app *App) on_button() {
 	app.jobLogger.AddForNow(app.activeProject)
 	log.Infof("Hide window - selected %s", app.activeProject)
 	app.win.Hide()
-	report, _ := app.jobLogger.ThisWeekSnapshot()
+	report, _ := app.jobLogger.ThisWeekSnapshot(app.configuration.PercentageMode)
 	for key, value := range report {
 		fmt.Println("Key:", key, "Value:", value)
 	}
@@ -160,6 +158,19 @@ func (app *App) on_skip() {
 	app.jobLogger.AddForNow(app.activeProject)
 	log.Info("Hide window - skip")
 	app.win.Hide()
+}
+
+func (app *App) on_mode_week(mn *desktop.Menu) {
+	app.configuration.PercentageMode = OfWeek
+	app.systray.SetMenu(app.trayMenu(OfWeek))
+	app.systray.Update()
+}
+
+func (app *App) on_mode_total(mn *desktop.Menu) {
+	app.configuration.PercentageMode = OfTotal
+	app.systray.SetMenu(app.trayMenu(OfTotal))
+	app.systray.Update()
+
 }
 
 func (app *App) changeButtonState() {
@@ -190,11 +201,46 @@ func main() {
 		systray:desktop.DesktopSysTrayNew(),
 		jobLogger:FileJobLogger{
 			Basedir:configuration.LogPath,
+			AskPerHour:60 / configuration.AskPeriodMin,
 		},
 		configuration: configuration,
 	}
 	icon := loadIcon(app)
-	menu := []desktop.Menu{
+
+	app.systray.SetIcon(icon)
+	app.systray.SetTitle("What are you doing now?")
+	app.systray.SetMenu(app.trayMenu(OfWeek))
+	app.systray.Show()
+
+	app.initWindow()
+
+	s := gocron.NewScheduler()
+	log.Info(fmt.Sprintf("Scheduling cron task for every %d minutes", app.configuration.AskPeriodMin))
+	s.Every(uint64(app.configuration.AskPeriodMin)).Minutes().Do(app.show)
+	s.Start()
+
+	app.show()
+	desktop.Main()
+}
+
+func (app *App) trayMenu(currentPercentageMode PercentageMode) []desktop.Menu {
+	percentageMenus := []desktop.Menu{
+		desktop.Menu{
+			Type:desktop.MenuCheckBox,
+			Enabled:true,
+			Name:"Of week (40h)",
+			State:currentPercentageMode==OfWeek,
+			Action:app.on_mode_week,
+		},
+		desktop.Menu{
+			Type:desktop.MenuCheckBox,
+			Enabled:true,
+			Name:"Of total spent time",
+			State:currentPercentageMode==OfTotal,
+			Action:app.on_mode_total,
+		},
+	}
+	return []desktop.Menu{
 		desktop.Menu{
 			Type: desktop.MenuItem,
 			Enabled: true,
@@ -207,20 +253,11 @@ func main() {
 			Name: "Copy prev week report to clipboard",
 			Action: app.CopyPrevWeekToClipboard,
 		},
+		desktop.Menu{
+			Type:desktop.MenuItem,
+			Enabled:true,
+			Name:"Percent calculation mode",
+			Menu:percentageMenus,
+		},
 	}
-
-	app.systray.SetIcon(icon)
-	app.systray.SetTitle("What are you doing now?")
-	app.systray.SetMenu(menu)
-	app.systray.Show()
-
-	app.initWindow()
-
-	s := gocron.NewScheduler()
-	log.Info(fmt.Sprintf("Scheduling cron task for every %d minutes", app.configuration.AskPeriodMin))
-	s.Every(uint64(app.configuration.AskPeriodMin)).Minutes().Do(app.show)
-	s.Start()
-
-	app.show()
-	desktop.Main()
 }

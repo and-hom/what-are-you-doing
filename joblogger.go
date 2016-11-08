@@ -13,8 +13,8 @@ import (
 type JobLogger interface {
 	AddForNow(project string)
 	// percent of time by project
-	PrviousWeekSnapshot() (map[string]int, int)
-	ThisWeekSnapshot() (map[string]int, int)
+	PrviousWeekSnapshot(percentageMode PercentageMode) (map[string]int, int)
+	ThisWeekSnapshot(percentageMode PercentageMode) (map[string]int, int)
 }
 
 type StdoutJobLogger struct {
@@ -23,10 +23,10 @@ type StdoutJobLogger struct {
 func (v StdoutJobLogger) AddForNow(project string) {
 	fmt.Printf("%s\n", project)
 }
-func (v StdoutJobLogger) PrviousWeekSnapshot() (map[string]int, int) {
+func (v StdoutJobLogger) PrviousWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
 	return nil, 0
 }
-func (v StdoutJobLogger) ThisWeekSnapshot() (map[string]int, int) {
+func (v StdoutJobLogger) ThisWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
 	return nil, 0
 }
 
@@ -35,6 +35,7 @@ const CSV_SEPARATOR = "\t"
 type FileJobLogger struct {
 	currentWeek int;
 	Basedir     string;
+	AskPerHour int;
 }
 
 func (v FileJobLogger) thisWeek() int {
@@ -64,7 +65,7 @@ func (v FileJobLogger) AddForNow(project string) {
 	}
 }
 
-func (v FileJobLogger) weekSnapshot(week int) (map[string]int, int) {
+func (v FileJobLogger) weekSnapshot(week int, percentageMode PercentageMode) (map[string]int, int) {
 	path := v.logPath(week)
 	result := map[string]int{}
 
@@ -90,20 +91,28 @@ func (v FileJobLogger) weekSnapshot(week int) (map[string]int, int) {
 			sum += 1
 		}
 
-		if sum > 0 {
+		var total int
+		switch percentageMode {
+		case OfWeek:
+			total = 40 * v.AskPerHour
+		case OfTotal:
+			total = sum
+		}
+
+		if total > 0 {
 			for k, _ := range result {
-				result[k] = result[k] * 100 / sum;
+				result[k] = result[k] * 100 / total;
 			}
 		}
 	}
 	return result, week
 }
 
-func (v FileJobLogger) PrviousWeekSnapshot() (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek() - 1)
+func (v FileJobLogger) PrviousWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
+	return v.weekSnapshot(v.thisWeek() - 1, percentageMode)
 }
 
-func (v FileJobLogger) ThisWeekSnapshot() (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek())
+func (v FileJobLogger) ThisWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
+	return v.weekSnapshot(v.thisWeek(), percentageMode)
 }
 
