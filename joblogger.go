@@ -38,7 +38,7 @@ type FileJobLogger struct {
 	AskPerHour int;
 }
 
-func (v FileJobLogger) thisWeek() int {
+func thisWeek() int {
 	_, w := time.Now().ISOWeek()
 	return int(w)
 }
@@ -48,12 +48,12 @@ func (v FileJobLogger) logPath(week int) string {
 }
 
 func (v FileJobLogger) summaryPath() string {
-	return fmt.Sprintf("%s/%d-summary.txt", v.Basedir, v.thisWeek())
+	return fmt.Sprintf("%s/%d-summary.txt", v.Basedir, thisWeek())
 }
 
 func (v FileJobLogger) AddForNow(project string) {
 	os.MkdirAll(v.Basedir, 0777)
-	path := v.logPath(v.thisWeek())
+	path := v.logPath(thisWeek())
 	file, e := os.OpenFile(path, os.O_RDWR | os.O_APPEND | os.O_CREATE, 0660);
 	if e != nil {
 		log.Panic(e)
@@ -109,10 +109,10 @@ func (v FileJobLogger) weekSnapshot(week int, percentageMode PercentageMode) (ma
 }
 
 func (v FileJobLogger) PrviousWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek() - 1, percentageMode)
+	return v.weekSnapshot(thisWeek() - 1, percentageMode)
 }
 
 func (v FileJobLogger) ThisWeekSnapshot(percentageMode PercentageMode) (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek(), percentageMode)
+	return v.weekSnapshot(thisWeek(), percentageMode)
 }
 

@@ -29,13 +29,18 @@ func assertBtnCreated(err error) {
 }
 
 type App struct {
-	configuration   Configuration
-	systray         *desktop.DesktopSysTray
-	jobLogger       JobLogger
-	activeProject   string ""
-	win             *gtk.Window
+	configuration Configuration
+	systray       *desktop.DesktopSysTray
+	jobLogger     JobLogger
+	activeProject string ""
+	win           *gtk.Window
 }
 
+func (app *App) toClipboardText(text string) {
+	if err := clipboard.WriteAll(text); err != nil {
+		panic(err)
+	}
+}
 func (app *App) toClipboard(report map[string]int, week int) {
 	var buffer bytes.Buffer
 
@@ -47,9 +52,7 @@ func (app *App) toClipboard(report map[string]int, week int) {
 		buffer.WriteString(fmt.Sprintf("**%s** - %d%%\n", k, v))
 	}
 
-	if err := clipboard.WriteAll(buffer.String()); err != nil {
-		panic(err)
-	}
+	app.toClipboardText(buffer.String())
 }
 
 func (app *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
@@ -59,6 +62,9 @@ func (app *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
 func (app *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
 	report, week := app.jobLogger.PrviousWeekSnapshot(app.configuration.PercentageMode)
 	app.toClipboard(report, week)
+}
+func (app *App) copyCurrentWeekNumberToClipboard(mn *desktop.Menu) {
+	app.toClipboardText(fmt.Sprintf("%02d", thisWeek()))
 }
 func (app *App) initWindow() {
 	log.Info("Window creation...")
@@ -177,7 +183,7 @@ func (app *App) changeButtonState() {
 
 }
 
-func loadIcon(app App) image.Image {
+func loadIcon() image.Image {
 	imgData, err := Asset("icon.png")
 	if err != nil {
 		panic(err)
@@ -205,7 +211,7 @@ func main() {
 		},
 		configuration: configuration,
 	}
-	icon := loadIcon(app)
+	icon := loadIcon()
 
 	app.systray.SetIcon(icon)
 	app.systray.SetTitle("What are you doing now?")
@@ -229,18 +235,24 @@ func (app *App) trayMenu(currentPercentageMode PercentageMode) []desktop.Menu {
 			Type:desktop.MenuCheckBox,
 			Enabled:true,
 			Name:"Of week (40h)",
-			State:currentPercentageMode==OfWeek,
+			State:currentPercentageMode == OfWeek,
 			Action:app.on_mode_week,
 		},
 		desktop.Menu{
 			Type:desktop.MenuCheckBox,
 			Enabled:true,
 			Name:"Of total spent time",
-			State:currentPercentageMode==OfTotal,
+			State:currentPercentageMode == OfTotal,
 			Action:app.on_mode_total,
 		},
 	}
 	return []desktop.Menu{
+		desktop.Menu{
+			Type:desktop.MenuItem,
+			Enabled:true,
+			Name:fmt.Sprintf("w%02d", thisWeek()),
+			Action:app.copyCurrentWeekNumberToClipboard,
+		},
 		desktop.Menu{
 			Type: desktop.MenuItem,
 			Enabled: true,
