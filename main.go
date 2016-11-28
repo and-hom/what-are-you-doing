@@ -11,6 +11,7 @@ import (
 	"github.com/axet/desktop/go"
 	"github.com/atotto/clipboard"
 	"time"
+	"os"
 )
 
 func mkgrid(orientation gtk.Orientation) *gtk.Grid {
@@ -65,6 +66,9 @@ func (app *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
 }
 func (app *App) copyCurrentWeekNumberToClipboard(mn *desktop.Menu) {
 	app.toClipboardText(fmt.Sprintf("%02d", thisWeek()))
+}
+func (app *App) exit(mn *desktop.Menu) {
+	os.Exit(0)
 }
 func (app *App) initWindow() {
 	log.Info("Window creation...")
@@ -270,6 +274,12 @@ func (app *App) trayMenu(currentPercentageMode PercentageMode) []desktop.Menu {
 			Enabled:true,
 			Name:"Percent calculation mode",
 			Menu:percentageMenus,
+		},
+		desktop.Menu{
+			Type:desktop.MenuItem,
+			Enabled:true,
+			Name:"Exit",
+			Action:app.exit,
 		},
 	}
 }
