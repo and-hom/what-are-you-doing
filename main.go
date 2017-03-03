@@ -165,7 +165,6 @@ func (app *App) on_button() {
 }
 
 func (app *App) on_skip() {
-	app.jobLogger.AddForNow(app.activeProject)
 	log.Info("Hide window - skip")
 	app.win.Hide()
 }
