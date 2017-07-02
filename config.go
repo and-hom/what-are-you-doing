@@ -3,7 +3,7 @@ package main
 import (
 	"gopkg.in/yaml.v2"
 	log "github.com/Sirupsen/logrus"
-	"github.com/axet/desktop/go"
+	"gitlab.com/axet/desktop/go"
 	"io/ioutil"
 	"text/template"
 	"bytes"

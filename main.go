@@ -9,7 +9,7 @@ import (
 	"os"
 	"image"
 	"bytes"
-	"github.com/axet/desktop/go"
+	"gitlab.com/axet/desktop/go"
 	"github.com/atotto/clipboard"
 	"time"
 )
