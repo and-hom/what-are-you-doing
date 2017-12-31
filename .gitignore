@@ -1,3 +1,6 @@
 what-are-you-doing
 .idea
 *.iml
+*.qmlc
+moc*
+rcc*
