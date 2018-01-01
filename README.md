@@ -28,8 +28,23 @@ qtsetup
 ```
 6. Build and install app
 ```
+go get github.com/and-hom/what-are-you-doing
+cd $GOPATH/src/github.com/and-hom/what-are-you-doing
+
 qtrcc
 qtmoc
+
+# may take several minutes or more!
 go build
+
 go install
+```
+7. Install https://glide.sh/
+8. Install https://github.com/mh-cbon/go-bin-deb
+9. Build a package
+```
+rm -rf ./pkg-build
+rm -f *.deb
+go-bin-deb  generate
+
 ```

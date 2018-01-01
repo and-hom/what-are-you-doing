@@ -72,18 +72,25 @@ func load(configLocationOverride string) Configuration {
 		return c1
 	}
 
-	p2 := "/etc/what-are-you-doing.yaml"
+	p2 := "/etc/what-are-you-doing/config.yaml"
 	log.Infof("Try to load config from %s", p2)
 	c2, err := loadConf(p2)
 	if err == nil {
 		return c2
 	}
 
-	p3 := "./config.yaml"
+	p3 := "/etc/what-are-you-doing.yaml"
 	log.Infof("Try to load config from %s", p3)
 	c3, err := loadConf(p3)
 	if err == nil {
 		return c3
+	}
+
+	p4 := "./config.yaml"
+	log.Infof("Try to load config from %s", p4)
+	c4, err := loadConf(p4)
+	if err == nil {
+		return c4
 	}
 
 	return Configuration{}
