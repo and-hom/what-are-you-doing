@@ -1,5 +1,7 @@
 what-are-you-doing
 
+*.log
+
 .idea
 *.iml
 
