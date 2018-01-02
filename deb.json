@@ -22,6 +22,15 @@
   "conf-files": [
     "/etc/what-are-you-doing/config.yaml"
   ],
+  "depends": [
+    "libqt5quick5",
+    "libqt5designer5",
+    "libqt5multimedia5",
+    "qml-module-qtquick-controls",
+    "qml-module-qtquick-controls2",
+    "qml-module-qtquick-layouts",
+    "qml-module-qt-labs-platform"
+  ],
   "copyrights": [
     {
       "files": "*",
