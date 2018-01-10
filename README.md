@@ -1,4 +1,4 @@
-How to build
+## How to build
 
 1. Download and unpack QT 5.9
 ```
@@ -45,6 +45,15 @@ go install
 ```
 rm -rf ./pkg-build
 rm -f *.deb
-go-bin-deb  generate
+go-bin-deb generate
 
 ```
+
+## Configuration
+You can see/edit configuration file ``/etc/what-are-you-doing/config.yaml`` and override it with ``%s/.what-are-you-doing/config.yaml``
+
+## Usage
+1. ``what-are-you-doing`` - start main loop and show ask window every period (see **Configuration**)
+2. ``what-are-you-doing print`` - print this week report (if tray menu is unavailable)
+3. ``what-are-you-doing print --prev`` - print previous week report (if tray menu is unavailable)
+3. ``what-are-you-doing --help`` - see options

@@ -5,49 +5,25 @@ import (
 
 	"fmt"
 	"os"
-	"gitlab.com/axet/desktop/go"
-	"github.com/atotto/clipboard"
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/qml"
+	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
 )
 
-type App struct {
-	configuration Configuration
-	systray       *desktop.DesktopSysTray
-	jobLogger     JobLogger
-	activeProject string ""
-	//	win           *gtk.Window
-}
-
-func (app *App) toClipboard(report map[string]int, week int) {
-	reportStr := snapshotToString(report, week)
-	if err := clipboard.WriteAll(reportStr); err != nil {
-		panic(err)
-	}
-}
-
-func (app *App) CopyThisWeekToClipboard(mn *desktop.Menu) {
-	report, week := app.jobLogger.ThisWeekSnapshot()
-	app.toClipboard(report, week)
-}
-
-func (app *App) CopyPrevWeekToClipboard(mn *desktop.Menu) {
-	report, week := app.jobLogger.PrviousWeekSnapshot()
-	app.toClipboard(report, week)
-}
 
 type QmlBride struct {
 	core.QObject
-	_         func(project string) `slot:"okPressed"`
-	_         func() `slot:"copyThisWeekPressed"`
-	_         func() `slot:"copyPrevWeekPressed"`
-	_         func() `slot:"windowClosed"`
-	_         func() uint64 `slot:"showPeriod"`
-	_         func() `constructor:"init"`
+	_            func(project string) `slot:"okPressed"`
+	_            func() `slot:"copyThisWeekPressed"`
+	_            func() `slot:"copyPrevWeekPressed"`
+	_            func() `slot:"windowClosed"`
+	_            func() uint64 `slot:"showPeriod"`
+	_            func() `constructor:"init"`
 
-	jobLogger JobLogger
-	clipboard *gui.QClipboard
+	jobLogger    JobLogger
+	clipboard    *gui.QClipboard
 	showPeriodMs uint64
 }
 
@@ -82,26 +58,61 @@ func (bridge *QmlBride) init() {
 
 func main() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp:true, TimestampFormat:"2006-01-02 15:04:05 -0700"})
+	log.SetOutput(ioutil.Discard)
 	log.Info("Starting...")
+
+	cliApp := cli.NewApp()
+	cliApp.Name = "What are you doing now?"
+	cliApp.Usage = "Simple task logger"
 
 	configuration := load("")
 	log.Infof("Loaded configuration %+v", configuration)
 
 	jobLogger := FileJobLogger{Basedir:configuration.LogPath}
 
-	gui.NewQGuiApplication(len(os.Args), os.Args)
+	cliApp.Commands = []cli.Command{
+		{
+			Name:    "print",
+			Aliases: []string{"p"},
+			Usage:   "print data for this week",
+			Action: func(c *cli.Context) error {
+				var report map[string]int
+				var week int
+				if c.Bool("prev") {
+					report, week = jobLogger.PrviousWeekSnapshot()
+				} else {
+					report, week = jobLogger.ThisWeekSnapshot()
+				}
+				fmt.Println(snapshotToString(report, week))
+				return nil
+			},
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "prev",
+					Usage: "Print for previous week instead of current",
+				},
+			},
+		},
+	}
 
-	bridge := NewQmlBride(nil)
-	bridge.jobLogger = jobLogger
-	bridge.clipboard = gui.QGuiApplication_Clipboard()
-	bridge.showPeriodMs = uint64(configuration.AskPeriodMin * 60000)
+	cliApp.Action = func(c *cli.Context) error {
+		gui.NewQGuiApplication(len(os.Args), os.Args)
 
-	engine := qml.NewQQmlApplicationEngine(nil)
-	engine.Load(core.NewQUrl3("qrc:/qml/application.qml", 0))
-	ctxt := engine.RootContext()
+		bridge := NewQmlBride(nil)
+		bridge.jobLogger = jobLogger
+		bridge.clipboard = gui.QGuiApplication_Clipboard()
+		bridge.showPeriodMs = uint64(configuration.AskPeriodMin * 60000)
 
-	ctxt.SetContextProperty("bridge", bridge)
-	ctxt.SetContextProperty("projectList", core.NewQStringListModel2(configuration.Projects, nil))
+		engine := qml.NewQQmlApplicationEngine(nil)
+		engine.Load(core.NewQUrl3("qrc:/qml/application.qml", 0))
+		ctxt := engine.RootContext()
 
-	gui.QGuiApplication_Exec()
+		ctxt.SetContextProperty("bridge", bridge)
+		ctxt.SetContextProperty("projectList", core.NewQStringListModel2(configuration.Projects, nil))
+
+		gui.QGuiApplication_Exec()
+
+		return nil
+	}
+	cliApp.Run(os.Args)
 }
