@@ -1,0 +1,40 @@
+{
+  "name": "what-are-you-doing",
+  "version": "0.0.2",
+  "arch": "amd64",
+  "maintainer": "Andrey Khomyakov <and.hom@gmail.com>",
+  "description": "Every some minutes ask \"What are you doing now\"",
+  "homepage": "http://github.com/and-hom/!name!",
+  "files": [
+    {
+      "from": "what-are-you-doing",
+      "to": "/usr/bin",
+      "base": "",
+      "fperm": "0755"
+    },
+    {
+      "from": "config.yaml",
+      "to": "/etc/what-are-you-doing",
+      "base": "",
+      "fperm": "0466"
+    }
+  ],
+  "conf-files": [
+    "/etc/what-are-you-doing/config.yaml"
+  ],
+  "depends": [
+    "libqt5quick5",
+    "libqt5designer5",
+    "libqt5multimedia5",
+    "qml-module-qtquick-controls",
+    "qml-module-qtquick-controls2",
+    "qml-module-qtquick-layouts",
+    "qml-module-qt-labs-platform"
+  ],
+  "copyrights": [
+    {
+      "files": "*",
+      "copyright": "2018 Andrey Khomyakov <and.hom@gmail.com>"
+    }
+  ]
+}

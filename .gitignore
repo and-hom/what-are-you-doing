@@ -1,3 +1,13 @@
 what-are-you-doing
+
+*.log
+
 .idea
 *.iml
+
+*.qmlc
+moc*
+rcc*
+
+pkg-build
+*.deb

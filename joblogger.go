@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"bytes"
 )
 
 type JobLogger interface {
@@ -15,6 +16,21 @@ type JobLogger interface {
 	// percent of time by project
 	PrviousWeekSnapshot() (map[string]int, int)
 	ThisWeekSnapshot() (map[string]int, int)
+}
+
+
+func snapshotToString(report map[string]int, week int) string {
+	var buffer bytes.Buffer
+
+	local, _ := time.LoadLocation("Local")
+	monday := firstDayOfISOWeek(time.Now().Year(), week, local)
+	friday := monday.Add(5 * 24 * time.Hour)
+	buffer.WriteString(fmt.Sprintf("%s - %s\n", monday.Format("2006-01-02"), friday.Format("2006-01-02")))
+	for k, v := range report {
+		buffer.WriteString(fmt.Sprintf("**%s** - %d%%\n", k, v))
+	}
+
+	return buffer.String()
 }
 
 type StdoutJobLogger struct {
