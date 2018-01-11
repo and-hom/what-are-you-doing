@@ -29,6 +29,7 @@ type QmlBride struct {
 	showPeriodMs uint64
 	workingTimeYellowLimit int
 	workingTimeRedLimit int
+	normalized   bool
 }
 
 func (bridge *QmlBride) copy(s string) {
@@ -41,16 +42,16 @@ func (bridge *QmlBride) init() {
 		fmt.Println(" go: OK!" + project)
 	})
 	bridge.ConnectWindowClosed(func() {
-		report, _ := bridge.jobLogger.ThisWeekSnapshot()
+		report, _ := bridge.jobLogger.ThisWeekSnapshot(bridge.normalized)
 		for key, value := range report {
 			fmt.Println("Key:", key, "Value:", value)
 		}
 	})
 	bridge.ConnectCopyThisWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot()))
+		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot(bridge.normalized)))
 	})
 	bridge.ConnectCopyPrevWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot()))
+		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot(bridge.normalized)))
 	})
 	bridge.ConnectShowPeriod(func() uint64 {
 		return bridge.showPeriodMs
@@ -80,7 +81,7 @@ func main() {
 	configuration := load("")
 	log.Infof("Loaded configuration %+v", configuration)
 
-	jobLogger := CreateFileJobLogger(configuration.LogPath)
+	jobLogger := CreateFileJobLogger(configuration.LogPath, 60 / configuration.AskPeriodMin)
 
 	cliApp.Commands = []cli.Command{
 		{
@@ -90,15 +91,20 @@ func main() {
 			Action: func(c *cli.Context) error {
 				var report map[string]int
 				var week int
+				normalized := c.Bool("normalized")
 				if c.Bool("prev") {
-					report, week = jobLogger.PrviousWeekSnapshot()
+					report, week = jobLogger.PrviousWeekSnapshot(normalized)
 				} else {
-					report, week = jobLogger.ThisWeekSnapshot()
+					report, week = jobLogger.ThisWeekSnapshot(normalized)
 				}
 				fmt.Println(snapshotToString(report, week))
 				return nil
 			},
 			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "normalized",
+					Usage: "Normalize values. true means 100% is total. false means 100% is 40h. If you worked more then 40h this week and use false value, sum will be more then 100%",
+				},
 				cli.BoolFlag{
 					Name: "prev",
 					Usage: "Print for previous week instead of current",

@@ -14,8 +14,8 @@ import (
 type JobLogger interface {
 	AddForNow(project string)
 	// percent of time by project
-	PrviousWeekSnapshot() (map[string]int, int)
-	ThisWeekSnapshot() (map[string]int, int)
+	PrviousWeekSnapshot(normalized bool) (map[string]int, int)
+	ThisWeekSnapshot(normalized bool) (map[string]int, int)
 	GetWorkingHourForToday() int
 }
 
@@ -39,24 +39,26 @@ type StdoutJobLogger struct {
 func (v StdoutJobLogger) AddForNow(project string) {
 	fmt.Printf("%s\n", project)
 }
-func (v StdoutJobLogger) PrviousWeekSnapshot() (map[string]int, int) {
+func (v StdoutJobLogger) PrviousWeekSnapshot(normalized bool) (map[string]int, int) {
 	return nil, 0
 }
-func (v StdoutJobLogger) ThisWeekSnapshot() (map[string]int, int) {
+func (v StdoutJobLogger) ThisWeekSnapshot(normalized bool) (map[string]int, int) {
 	return nil, 0
 }
 func (v StdoutJobLogger) GetWorkingHourForToday() int {
 	return 0
 }
 
+const HOURS_PER_WEEK int = 40
 const CSV_SEPARATOR = "\t"
 const MIN_IDLE_TIME_FOR_NEW_DAY_DETECTION_HOURS int = 8
 var STARTED_AT int64 = time.Now().Unix()
 
 
-func CreateFileJobLogger(baseDir string) FileJobLogger {
+func CreateFileJobLogger(baseDir string, askPerHour int) FileJobLogger {
 	jobLogger := FileJobLogger{
 		Basedir: baseDir,
+		AskPerHour: askPerHour,
 		currentWeekDump:[]int64{},
 	}
 	jobLogger.scan(jobLogger.thisWeek(), func(ts int64, _ string){
@@ -69,6 +71,7 @@ type FileJobLogger struct {
 	currentWeek     int;
 	Basedir         string;
 	currentWeekDump []int64;
+	AskPerHour int;
 }
 
 func (v FileJobLogger) thisWeek() int {
@@ -123,7 +126,7 @@ func (v FileJobLogger) scan(week int, callback func(ts int64, project string)) {
 	}
 }
 
-func (v FileJobLogger) weekSnapshot(week int) (map[string]int, int) {
+func (v FileJobLogger) weekSnapshot(week int, normalized bool) (map[string]int, int) {
 	result := map[string]int{}
 	sum := 0
 
@@ -132,21 +135,28 @@ func (v FileJobLogger) weekSnapshot(week int) (map[string]int, int) {
 		sum += 1
 	})
 
+	var total int
+	if normalized {
+		total = HOURS_PER_WEEK * v.AskPerHour
+	} else {
+		total = sum
+	}
+
 	if sum > 0 {
 		for k, _ := range result {
-			result[k] = result[k] * 100 / sum;
+			result[k] = result[k] * 100 / total;
 		}
 	}
 
 	return result, week
 }
 
-func (v FileJobLogger) PrviousWeekSnapshot() (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek() - 1)
+func (v FileJobLogger) PrviousWeekSnapshot(normalized bool) (map[string]int, int) {
+	return v.weekSnapshot(v.thisWeek() - 1, normalized)
 }
 
-func (v FileJobLogger) ThisWeekSnapshot() (map[string]int, int) {
-	return v.weekSnapshot(v.thisWeek())
+func (v FileJobLogger) ThisWeekSnapshot(normalized bool) (map[string]int, int) {
+	return v.weekSnapshot(v.thisWeek(), normalized)
 }
 
 func (v FileJobLogger) GetWorkingHourForToday() int {
