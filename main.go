@@ -120,6 +120,7 @@ func main() {
 		bridge.jobLogger = jobLogger
 		bridge.clipboard = gui.QGuiApplication_Clipboard()
 		bridge.showPeriodMs = uint64(configuration.AskPeriodMin * 60000)
+		bridge.normalized = true
 		bridge.workingTimeYellowLimit = configuration.WorkingTimeYellowLimit
 		bridge.workingTimeRedLimit = configuration.WorkingTimeRedLimit
 
