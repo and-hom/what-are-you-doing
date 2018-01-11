@@ -55,5 +55,7 @@ You can see/edit configuration file ``/etc/what-are-you-doing/config.yaml`` and 
 ## Usage
 1. ``what-are-you-doing`` - start main loop and show ask window every period (see **Configuration**)
 2. ``what-are-you-doing print`` - print this week report (if tray menu is unavailable)
+2. ``what-are-you-doing print --normalized`` - print this week report, but use 40 hours as 100%
 3. ``what-are-you-doing print --prev`` - print previous week report (if tray menu is unavailable)
+3. ``what-are-you-doing print --prev`` - print previous week report (if tray menu is unavailable), but use 40 hours as 100%
 3. ``what-are-you-doing --help`` - see options

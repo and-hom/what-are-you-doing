@@ -16,8 +16,8 @@ import (
 type QmlBride struct {
 	core.QObject
 	_            func(project string) `slot:"okPressed"`
-	_            func() `slot:"copyThisWeekPressed"`
-	_            func() `slot:"copyPrevWeekPressed"`
+	_            func(normalized bool) `slot:"copyThisWeekPressed"`
+	_            func(normalized bool) `slot:"copyPrevWeekPressed"`
 	_            func() `slot:"windowClosed"`
 	_            func() uint64 `slot:"showPeriod"`
 	_            func() bool `slot:"isYellowMode"`
@@ -41,16 +41,16 @@ func (bridge *QmlBride) init() {
 		fmt.Println(" go: OK!" + project)
 	})
 	bridge.ConnectWindowClosed(func() {
-		report, _ := bridge.jobLogger.ThisWeekSnapshot()
+		report, _ := bridge.jobLogger.ThisWeekSnapshot(true)
 		for key, value := range report {
 			fmt.Println("Key:", key, "Value:", value)
 		}
 	})
-	bridge.ConnectCopyThisWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot()))
+	bridge.ConnectCopyThisWeekPressed(func(normalized bool) {
+		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot(normalized)))
 	})
-	bridge.ConnectCopyPrevWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot()))
+	bridge.ConnectCopyPrevWeekPressed(func(normalized bool) {
+		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot(normalized)))
 	})
 	bridge.ConnectShowPeriod(func() uint64 {
 		return bridge.showPeriodMs
@@ -80,7 +80,7 @@ func main() {
 	configuration := load("")
 	log.Infof("Loaded configuration %+v", configuration)
 
-	jobLogger := CreateFileJobLogger(configuration.LogPath)
+	jobLogger := CreateFileJobLogger(configuration.LogPath, 60 / configuration.AskPeriodMin)
 
 	cliApp.Commands = []cli.Command{
 		{
@@ -90,15 +90,20 @@ func main() {
 			Action: func(c *cli.Context) error {
 				var report map[string]int
 				var week int
+				normalized := c.Bool("normalized")
 				if c.Bool("prev") {
-					report, week = jobLogger.PrviousWeekSnapshot()
+					report, week = jobLogger.PrviousWeekSnapshot(normalized)
 				} else {
-					report, week = jobLogger.ThisWeekSnapshot()
+					report, week = jobLogger.ThisWeekSnapshot(normalized)
 				}
 				fmt.Println(snapshotToString(report, week))
 				return nil
 			},
 			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "normalized",
+					Usage: "Normalize values. true means 100% is total. false means 100% is 40h. If you worked more then 40h this week and use false value, sum will be more then 100%",
+				},
 				cli.BoolFlag{
 					Name: "prev",
 					Usage: "Print for previous week instead of current",
