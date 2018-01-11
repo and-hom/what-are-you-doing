@@ -57,11 +57,11 @@ func (bridge *QmlBride) init() {
 	})
 	bridge.ConnectIsRedMode(func() bool {
 		workingHour := bridge.jobLogger.GetWorkingHourForToday()
-		return workingHour>0 && workingHour >= bridge.workingTimeRedLimit
+		return workingHour>0 && bridge.workingTimeRedLimit>0 && workingHour >= bridge.workingTimeRedLimit
 	})
 	bridge.ConnectIsYellowMode(func() bool {
 		workingHour := bridge.jobLogger.GetWorkingHourForToday()
-		return workingHour>0 && workingHour >= bridge.workingTimeYellowLimit
+		return workingHour>0 && bridge.workingTimeYellowLimit>0 && workingHour >= bridge.workingTimeYellowLimit
 	})
 
 	var obj = core.NewQObject(nil)
