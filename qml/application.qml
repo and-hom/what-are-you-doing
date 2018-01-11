@@ -127,12 +127,12 @@ ApplicationWindow {
 
         menu: Menu {
             MenuItem {
-                text: qsTr("Copy this week report to clipboard")
-                onTriggered: bridge.copyThisWeekPressed()
+                text: qsTr("Copy percent of 40 hours for this week")
+                onTriggered: bridge.copyThisWeekPressed(true)
             }
             MenuItem {
-                text: qsTr("Copy prev week report to clipboard")
-                onTriggered: bridge.copyPrevWeekPressed()
+                text: qsTr("Copy percent of 40 hours for prev week")
+                onTriggered: bridge.copyPrevWeekPressed(true)
             }
             MenuItem {
                 text: qsTr("Quit")

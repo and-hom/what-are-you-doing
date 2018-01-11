@@ -16,8 +16,8 @@ import (
 type QmlBride struct {
 	core.QObject
 	_            func(project string) `slot:"okPressed"`
-	_            func() `slot:"copyThisWeekPressed"`
-	_            func() `slot:"copyPrevWeekPressed"`
+	_            func(normalized bool) `slot:"copyThisWeekPressed"`
+	_            func(normalized bool) `slot:"copyPrevWeekPressed"`
 	_            func() `slot:"windowClosed"`
 	_            func() uint64 `slot:"showPeriod"`
 	_            func() bool `slot:"isYellowMode"`
@@ -29,7 +29,6 @@ type QmlBride struct {
 	showPeriodMs uint64
 	workingTimeYellowLimit int
 	workingTimeRedLimit int
-	normalized   bool
 }
 
 func (bridge *QmlBride) copy(s string) {
@@ -42,16 +41,16 @@ func (bridge *QmlBride) init() {
 		fmt.Println(" go: OK!" + project)
 	})
 	bridge.ConnectWindowClosed(func() {
-		report, _ := bridge.jobLogger.ThisWeekSnapshot(bridge.normalized)
+		report, _ := bridge.jobLogger.ThisWeekSnapshot(true)
 		for key, value := range report {
 			fmt.Println("Key:", key, "Value:", value)
 		}
 	})
-	bridge.ConnectCopyThisWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot(bridge.normalized)))
+	bridge.ConnectCopyThisWeekPressed(func(normalized bool) {
+		bridge.copy(snapshotToString(bridge.jobLogger.ThisWeekSnapshot(normalized)))
 	})
-	bridge.ConnectCopyPrevWeekPressed(func() {
-		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot(bridge.normalized)))
+	bridge.ConnectCopyPrevWeekPressed(func(normalized bool) {
+		bridge.copy(snapshotToString(bridge.jobLogger.PrviousWeekSnapshot(normalized)))
 	})
 	bridge.ConnectShowPeriod(func() uint64 {
 		return bridge.showPeriodMs
@@ -120,7 +119,6 @@ func main() {
 		bridge.jobLogger = jobLogger
 		bridge.clipboard = gui.QGuiApplication_Clipboard()
 		bridge.showPeriodMs = uint64(configuration.AskPeriodMin * 60000)
-		bridge.normalized = true
 		bridge.workingTimeYellowLimit = configuration.WorkingTimeYellowLimit
 		bridge.workingTimeRedLimit = configuration.WorkingTimeRedLimit
 
