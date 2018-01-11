@@ -25,6 +25,11 @@ ApplicationWindow {
 
     flags: Qt.Window | Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint
 
+    background: Rectangle {
+        id: bgcolor
+        color: "#00000000"
+    }
+
     onClosing: {
         visible = false
         bridge.windowClosed()
@@ -94,8 +99,29 @@ ApplicationWindow {
             appWindow.visible = true
         }
     }
+    Timer {
+        id: trayicon_timer
+        interval: 600000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+
+        onTriggered: {
+            if (bridge.isRedMode()) {
+                trayicon.iconSource = "file:images/icon_red.png"
+                bgcolor.color = "#33ff0000"
+            } else if (bridge.isYellowMode()) {
+                trayicon.iconSource = "file:images/icon_yellow.png"
+                bgcolor.color = "#33ffff00"
+            } else {
+                trayicon.iconSource = "file:images/icon_green.png"
+                bgcolor.color = "#00000000"
+            }
+        }
+    }
 
     SystemTrayIcon {
+        id: trayicon
         visible: true
         iconSource: "file:images/icon.png"
 

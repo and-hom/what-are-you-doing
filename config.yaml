@@ -6,3 +6,6 @@ projects:
 ask-period-min: 30
 
 log-path: {{.HOME}}/.what-are-you-doing/
+
+working-time-yellow-limit: 7
+working-time-red-limit: 10
