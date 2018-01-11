@@ -25,7 +25,7 @@ func snapshotToString(report map[string]int, week int) string {
 	local, _ := time.LoadLocation("Local")
 	monday := firstDayOfISOWeek(time.Now().Year(), week, local)
 	friday := monday.Add(5 * 24 * time.Hour)
-	buffer.WriteString(fmt.Sprintf("%s - %s\n", monday.Format("2006-01-02"), friday.Format("2006-01-02")))
+	buffer.WriteString(fmt.Sprintf("====%s - %s\n", monday.Format("2006-01-02"), friday.Format("2006-01-02")))
 	for k, v := range report {
 		buffer.WriteString(fmt.Sprintf("**%s** - %d%%\n", k, v))
 	}
