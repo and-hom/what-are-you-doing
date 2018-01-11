@@ -16,6 +16,9 @@ type Configuration struct {
 	AskPeriodMin int `yaml:"ask-period-min"`
 	LogPath      string `yaml:"log-path"`
 	Projects     []string `yaml:"projects"`
+
+	WorkingTimeYellowLimit int `yaml:"working-time-yellow-limit"`
+	WorkingTimeRedLimit int `yaml:"working-time-red-limit"`
 }
 
 func loadConf(filename string) (Configuration, error) {
