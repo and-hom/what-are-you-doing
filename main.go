@@ -20,11 +20,15 @@ type QmlBride struct {
 	_            func() `slot:"copyPrevWeekPressed"`
 	_            func() `slot:"windowClosed"`
 	_            func() uint64 `slot:"showPeriod"`
+	_            func() bool `slot:"isYellowMode"`
+	_            func() bool `slot:"isRedMode"`
 	_            func() `constructor:"init"`
 
 	jobLogger    JobLogger
 	clipboard    *gui.QClipboard
 	showPeriodMs uint64
+	workingTimeYellowLimit int
+	workingTimeRedLimit int
 }
 
 func (bridge *QmlBride) copy(s string) {
@@ -51,6 +55,14 @@ func (bridge *QmlBride) init() {
 	bridge.ConnectShowPeriod(func() uint64 {
 		return bridge.showPeriodMs
 	})
+	bridge.ConnectIsRedMode(func() bool {
+		workingHour := bridge.jobLogger.GetWorkingHourForToday()
+		return workingHour>0 && workingHour >= bridge.workingTimeRedLimit
+	})
+	bridge.ConnectIsYellowMode(func() bool {
+		workingHour := bridge.jobLogger.GetWorkingHourForToday()
+		return workingHour>0 && workingHour >= bridge.workingTimeYellowLimit
+	})
 
 	var obj = core.NewQObject(nil)
 	obj.SetObjectName("objectName")
@@ -68,7 +80,7 @@ func main() {
 	configuration := load("")
 	log.Infof("Loaded configuration %+v", configuration)
 
-	jobLogger := FileJobLogger{Basedir:configuration.LogPath}
+	jobLogger := CreateFileJobLogger(configuration.LogPath)
 
 	cliApp.Commands = []cli.Command{
 		{
@@ -102,6 +114,8 @@ func main() {
 		bridge.jobLogger = jobLogger
 		bridge.clipboard = gui.QGuiApplication_Clipboard()
 		bridge.showPeriodMs = uint64(configuration.AskPeriodMin * 60000)
+		bridge.workingTimeYellowLimit = configuration.WorkingTimeYellowLimit
+		bridge.workingTimeRedLimit = configuration.WorkingTimeRedLimit
 
 		engine := qml.NewQQmlApplicationEngine(nil)
 		engine.Load(core.NewQUrl3("qrc:/qml/application.qml", 0))
